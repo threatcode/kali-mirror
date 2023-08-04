@@ -259,7 +259,6 @@ MODULE_DEVICE_TABLE(pci, gpu_i2c_ids);
 static const struct property_entry ccgx_props[] = {
 	/* Use FW built for NVIDIA GPU only */
 	PROPERTY_ENTRY_STRING("cypress,firmware-build", "nvidia,gpu"),
-	PROPERTY_ENTRY_STRING("firmware-name", "nvidia,gpu"),
 	{ }
 };
 

@@ -2,7 +2,7 @@
 /*
  * NVIDIA Tegra XUSB device mode controller
  *
- * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2022, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (c) 2015, Google Inc.
  */
 
@@ -702,6 +702,8 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 
 	pm_runtime_get_sync(xudc->dev);
 
+	tegra_phy_xusb_utmi_pad_power_on(xudc->curr_utmi_phy);
+
 	err = phy_power_on(xudc->curr_utmi_phy);
 	if (err < 0)
 		dev_err(xudc->dev, "UTMI power on failed: %d\n", err);
@@ -755,6 +757,8 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 	/* Make sure interrupt handler has completed before powergating. */
 	synchronize_irq(xudc->irq);
+
+	tegra_phy_xusb_utmi_pad_power_down(xudc->curr_utmi_phy);
 
 	err = phy_power_off(xudc->curr_utmi_phy);
 	if (err < 0)
@@ -2156,15 +2160,14 @@ static int tegra_xudc_gadget_stop(struct usb_gadget *gadget)
 static int tegra_xudc_gadget_vbus_draw(struct usb_gadget *gadget,
 						unsigned int m_a)
 {
-	int ret = 0;
 	struct tegra_xudc *xudc = to_xudc(gadget);
 
 	dev_dbg(xudc->dev, "%s: %u mA\n", __func__, m_a);
 
-	if (xudc->curr_usbphy->chg_type == SDP_TYPE)
-		ret = usb_phy_set_power(xudc->curr_usbphy, m_a);
+	if (xudc->curr_usbphy && xudc->curr_usbphy->chg_type == SDP_TYPE)
+		return usb_phy_set_power(xudc->curr_usbphy, m_a);
 
-	return ret;
+	return 0;
 }
 
 static int tegra_xudc_set_selfpowered(struct usb_gadget *gadget, int is_on)

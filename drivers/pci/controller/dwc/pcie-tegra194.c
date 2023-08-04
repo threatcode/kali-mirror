@@ -4,7 +4,7 @@
  * Tegra194
  * Tegra234
  *
- * Copyright (C) 2019-2022 NVIDIA Corporation.
+ * Copyright (C) 2019-2023 NVIDIA Corporation.
  *
  * Author: Vidya Sagar <vidyas@nvidia.com>
  */
@@ -263,12 +263,6 @@
 #define AMBA_ERROR_RESPONSE_CRS_OKAY		0
 #define AMBA_ERROR_RESPONSE_CRS_OKAY_FFFFFFFF	1
 #define AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001	2
-
-#define PORT_LOGIC_AMBA_LINK_TIMEOUT		0x8D4
-#define AMBA_LINK_TIMEOUT_PERIOD_MASK		0xFF
-#define AMBA_LINK_TIMEOUT_PERIOD_VAL		0x7
-
-#define PCI_EXP_DEVCTL2_CPL_TO_VAL		0x2 /* Range-A: 1ms to 10ms */
 
 #define PL_IF_TIMER_CONTROL_OFF			0x930
 #define PL_IF_TIMER_CONTROL_OFF_IF_TIMER_EN	BIT(0)
@@ -1391,11 +1385,6 @@ static int tegra_pcie_dw_host_init(struct pcie_port *pp)
 		pcie->pcie_cap_base = dw_pcie_find_capability(&pcie->pci,
 							      PCI_CAP_ID_EXP);
 
-	val_16 = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL);
-	val_16 &= ~PCI_EXP_DEVCTL_PAYLOAD;
-	val_16 |= PCI_EXP_DEVCTL_PAYLOAD_256B;
-	dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL, val_16);
-
 	val = dw_pcie_readl_dbi(pci, PCI_IO_BASE);
 	val &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
 	dw_pcie_writel_dbi(pci, PCI_IO_BASE, val);
@@ -1413,18 +1402,6 @@ static int tegra_pcie_dw_host_init(struct pcie_port *pp)
 	val |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 <<
 		AMBA_ERROR_RESPONSE_CRS_SHIFT);
 	dw_pcie_writel_dbi(pci, PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, val);
-
-	/* Reduce the AXI slave Timeout value to 7ms */
-	val  = dw_pcie_readl_dbi(pci, PORT_LOGIC_AMBA_LINK_TIMEOUT);
-	val &= ~AMBA_LINK_TIMEOUT_PERIOD_MASK;
-	val |= AMBA_LINK_TIMEOUT_PERIOD_VAL;
-	dw_pcie_writel_dbi(pci, PORT_LOGIC_AMBA_LINK_TIMEOUT, val);
-
-	/* Set the Completion Timeout value in 1ms~10ms range */
-	val_16  = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL2);
-	val_16 &= ~PCI_EXP_DEVCTL2_COMP_TIMEOUT;
-	val_16 |= PCI_EXP_DEVCTL2_CPL_TO_VAL;
-	dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL2, val_16);
 
 	/* Configure Max lane width from DT */
 	val = dw_pcie_readl_dbi(pci, pcie->pcie_cap_base + PCI_EXP_LNKCAP);
@@ -2305,7 +2282,6 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 	struct device *dev = pcie->dev;
 	u32 val;
 	int ret;
-	u16 val_16;
 
 	if (pcie->ep_state == EP_STATE_ENABLED)
 		return;
@@ -2476,26 +2452,16 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 	pcie->pcie_cap_base = dw_pcie_find_capability(&pcie->pci,
 						      PCI_CAP_ID_EXP);
 
-	val_16 = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL);
-	val_16 &= ~PCI_EXP_DEVCTL_PAYLOAD;
-	val_16 |= PCI_EXP_DEVCTL_PAYLOAD_256B;
-	dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL, val_16);
-
-	/* Set the Completion Timeout value in 1ms~10ms range */
-	val_16  = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL2);
-	val_16 &= ~PCI_EXP_DEVCTL2_COMP_TIMEOUT;
-	val_16 |= PCI_EXP_DEVCTL2_CPL_TO_VAL;
-	dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_DEVCTL2, val_16);
-
 	/* Clear Slot Clock Configuration bit if SRNS configuration */
 	if (pcie->enable_srns) {
+		u16 val_16;
+
 		val_16 = dw_pcie_readw_dbi(pci, pcie->pcie_cap_base +
 					   PCI_EXP_LNKSTA);
 		val_16 &= ~PCI_EXP_LNKSTA_SLC;
 		dw_pcie_writew_dbi(pci, pcie->pcie_cap_base + PCI_EXP_LNKSTA,
 				   val_16);
 	}
-
 	clk_set_rate(pcie->core_clk, GEN4_CORE_CLK_FREQ);
 
 	val = (ep->msi_mem_phys & MSIX_ADDR_MATCH_LOW_OFF_MASK);
@@ -3009,12 +2975,11 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 #endif
 
 	if (pcie->of_data->mode == DW_PCIE_RC_TYPE) {
+		disable_irq(pcie->prsnt_irq);
 		if (!pcie->link_state)
 			return 0;
 		if (!pm_runtime_enabled(pcie->dev))
 			return 0;
-
-		disable_irq(pcie->prsnt_irq);
 		debugfs_remove_recursive(pcie->debugfs);
 		tegra_pcie_deinit_controller(pcie);
 		pm_runtime_put_sync(pcie->dev);
@@ -3149,17 +3114,16 @@ static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
 
 	if (pcie->of_data->mode == DW_PCIE_RC_TYPE) {
+		disable_irq(pcie->prsnt_irq);
+		disable_irq(pcie->pci.pp.irq);
+		if (IS_ENABLED(CONFIG_PCI_MSI))
+			disable_irq(pcie->pci.pp.msi_irq);
 		if (!pcie->link_state)
 			return;
 		if (!pm_runtime_enabled(pcie->dev))
 			return;
 
 		debugfs_remove_recursive(pcie->debugfs);
-		disable_irq(pcie->prsnt_irq);
-		disable_irq(pcie->pci.pp.irq);
-		if (IS_ENABLED(CONFIG_PCI_MSI))
-			disable_irq(pcie->pci.pp.msi_irq);
-
 		tegra_pcie_dw_pme_turnoff(pcie);
 		tegra_pcie_unconfig_controller(pcie);
 		pm_runtime_put_sync(pcie->dev);

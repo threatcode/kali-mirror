@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 
 #include <soc/tegra/mc.h>
+#include <soc/tegra/tegra-platform-helper.h>
 
 #if defined(CONFIG_ARCH_TEGRA_186_SOC)
 #include <dt-bindings/memory/tegra186-mc.h>
@@ -107,9 +108,43 @@ static void tegra186_mc_client_sid_override(struct tegra_mc *mc,
 }
 #endif
 
+static int tegra186_mc_probe_device(struct tegra_mc *mc, struct device *dev)
+{
+#if IS_ENABLED(CONFIG_IOMMU_API)
+	struct iommu_fwspec *fwspec = dev_iommu_fwspec_get(dev);
+	struct of_phandle_args args;
+	unsigned int i, index = 0;
+
+	if (tegra_is_hypervisor_mode() == true) {
+		pr_debug("MC register access not allowed in Guest Linux\n");
+		return 0;
+	}
+
+	while (!of_parse_phandle_with_args(dev->of_node, "interconnects", "#interconnect-cells",
+					   index, &args)) {
+		if (args.np == mc->dev->of_node && args.args_count != 0) {
+			for (i = 0; i < mc->soc->num_clients; i++) {
+				const struct tegra_mc_client *client = &mc->soc->clients[i];
+
+				if (client->id == args.args[0]) {
+					u32 sid = fwspec->ids[0] & MC_SID_STREAMID_OVERRIDE_MASK;
+
+					tegra186_mc_client_sid_override(mc, client, sid);
+				}
+			}
+		}
+
+		index++;
+	}
+#endif
+
+	return 0;
+}
+
 const struct tegra_mc_ops tegra186_mc_ops = {
 	.probe = tegra186_mc_probe,
 	.remove = tegra186_mc_remove,
+	.probe_device = tegra186_mc_probe_device,
 	.handle_irq = tegra30_mc_handle_irq,
 };
 

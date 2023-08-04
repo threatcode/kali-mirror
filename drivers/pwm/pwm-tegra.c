@@ -318,9 +318,8 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		goto put_pm;
 	}
 
-	pm_runtime_put(&pdev->dev);
-
 	return 0;
+
 put_pm:
 	pm_runtime_put_sync_suspend(&pdev->dev);
 	pm_runtime_force_suspend(&pdev->dev);
@@ -399,7 +398,7 @@ MODULE_DEVICE_TABLE(of, tegra_pwm_of_match);
 
 static const struct dev_pm_ops tegra_pwm_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra_pwm_runtime_suspend, tegra_pwm_runtime_resume,
-			   NULL)
+				NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
 				pm_runtime_force_resume)
 };

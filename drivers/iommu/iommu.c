@@ -6,7 +6,6 @@
 
 #define pr_fmt(fmt)    "iommu: " fmt
 
-#include <linux/amba/bus.h>
 #include <linux/device.h>
 #include <linux/dma-iommu.h>
 #include <linux/kernel.h>
@@ -17,14 +16,12 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/errno.h>
-#include <linux/host1x_context_bus.h>
 #include <linux/iommu.h>
 #include <linux/idr.h>
 #include <linux/notifier.h>
 #include <linux/err.h>
 #include <linux/pci.h>
 #include <linux/bitops.h>
-#include <linux/platform_device.h>
 #include <linux/property.h>
 #include <linux/fsl/mc.h>
 #include <linux/module.h>
@@ -76,8 +73,6 @@ static const char * const iommu_group_resv_type_string[] = {
 #define IOMMU_CMD_LINE_DMA_API		BIT(0)
 #define IOMMU_CMD_LINE_STRICT		BIT(1)
 
-static int iommu_bus_notifier(struct notifier_block *nb,
-			      unsigned long action, void *data);
 static int iommu_alloc_default_domain(struct iommu_group *group,
 				      struct device *dev);
 static struct iommu_domain *__iommu_domain_alloc(struct bus_type *bus,
@@ -106,22 +101,6 @@ struct iommu_group_attribute iommu_group_attr_##_name =		\
 static LIST_HEAD(iommu_device_list);
 static DEFINE_SPINLOCK(iommu_device_lock);
 
-static struct bus_type * const iommu_buses[] = {
-	&platform_bus_type,
-#ifdef CONFIG_PCI
-	&pci_bus_type,
-#endif
-#ifdef CONFIG_ARM_AMBA
-	&amba_bustype,
-#endif
-#ifdef CONFIG_FSL_MC_BUS
-	&fsl_mc_bus_type,
-#endif
-#ifdef CONFIG_TEGRA_HOST1X_CONTEXT_BUS
-	&host1x_context_device_bus_type,
-#endif
-};
-
 /*
  * Use a function instead of an array here because the domain-type is a
  * bit-field, so an array would waste memory.
@@ -145,9 +124,6 @@ static const char *iommu_domain_type_str(unsigned int t)
 
 static int __init iommu_subsys_init(void)
 {
-	struct notifier_block *nb;
-	int i;
-
 	if (!(iommu_cmd_line & IOMMU_CMD_LINE_DMA_API)) {
 		if (IS_ENABLED(CONFIG_IOMMU_DEFAULT_PASSTHROUGH))
 			iommu_set_default_passthrough(false);
@@ -173,15 +149,6 @@ static int __init iommu_subsys_init(void)
 			iommu_dma_strict ? "strict" : "lazy",
 			(iommu_cmd_line & IOMMU_CMD_LINE_STRICT) ?
 				"(set via kernel command line)" : "");
-
-	nb = kcalloc(ARRAY_SIZE(iommu_buses), sizeof(*nb), GFP_KERNEL);
-	if (!nb)
-		return -ENOMEM;
-
-	for (i = 0; i < ARRAY_SIZE(iommu_buses); i++) {
-		nb[i].notifier_call = iommu_bus_notifier;
-		bus_register_notifier(iommu_buses[i], &nb[i]);
-	}
 
 	return 0;
 }
@@ -1872,6 +1839,39 @@ int bus_iommu_probe(struct bus_type *bus)
 	return ret;
 }
 
+static int iommu_bus_init(struct bus_type *bus, const struct iommu_ops *ops)
+{
+	struct notifier_block *nb;
+	int err;
+
+	nb = kzalloc(sizeof(struct notifier_block), GFP_KERNEL);
+	if (!nb)
+		return -ENOMEM;
+
+	nb->notifier_call = iommu_bus_notifier;
+
+	err = bus_register_notifier(bus, nb);
+	if (err)
+		goto out_free;
+
+	err = bus_iommu_probe(bus);
+	if (err)
+		goto out_err;
+
+
+	return 0;
+
+out_err:
+	/* Clean up */
+	bus_for_each_dev(bus, NULL, NULL, remove_iommu_group);
+	bus_unregister_notifier(bus, nb);
+
+out_free:
+	kfree(nb);
+
+	return err;
+}
+
 /**
  * bus_set_iommu - set iommu-callbacks for the bus
  * @bus: bus.
@@ -1900,12 +1900,9 @@ int bus_set_iommu(struct bus_type *bus, const struct iommu_ops *ops)
 	bus->iommu_ops = ops;
 
 	/* Do IOMMU specific setup for this bus-type */
-	err = bus_iommu_probe(bus);
-	if (err) {
-		/* Clean up */
-		bus_for_each_dev(bus, NULL, NULL, remove_iommu_group);
+	err = iommu_bus_init(bus, ops);
+	if (err)
 		bus->iommu_ops = NULL;
-	}
 
 	return err;
 }

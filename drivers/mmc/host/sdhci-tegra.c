@@ -3,36 +3,33 @@
  * Copyright (C) 2010 Google, Inc.
  */
 
-#include <linux/bitops.h>
-#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
-#include <linux/gpio/consumer.h>
+#include <linux/module.h>
 #include <linux/init.h>
-#include <linux/io.h>
-#include <linux/iommu.h>
 #include <linux/iopoll.h>
-#include <linux/ktime.h>
+#include <linux/platform_device.h>
+#include <linux/clk.h>
+#include <linux/io.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/regulator/consumer.h>
+#include <linux/reset.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/slot-gpio.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/of_device.h>
-#include <linux/pinctrl/consumer.h>
-#include <linux/platform_device.h>
-#include <linux/pm_opp.h>
-#include <linux/pm_runtime.h>
-#include <linux/regulator/consumer.h>
-#include <linux/reset.h>
+#include <linux/gpio/consumer.h>
+#include <linux/ktime.h>
+#include <linux/iommu.h>
+#include <linux/bitops.h>
+#include <linux/tegra_prod.h>
 
-#include <soc/tegra/common.h>
-
-#include "cqhci.h"
 #include "sdhci-cqhci.h"
 #include "sdhci-pltfm.h"
+#include "cqhci.h"
 
 /* Tegra SDHOST controller vendor register definitions */
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL			0x100
@@ -135,6 +132,20 @@
 					 SDHCI_TRNS_BLK_CNT_EN | \
 					 SDHCI_TRNS_DMA)
 
+static char prod_device_states[MMC_TIMING_COUNTER][20] = {
+	"prod_c_ds", /* MMC_TIMING_LEGACY */
+	"prod_c_hs", /* MMC_TIMING_MMC_HS */
+	"prod_c_hs", /* MMC_TIMING_SD_HS */
+	"prod_c_sdr12", /* MMC_TIMING_UHS_SDR12 */
+	"prod_c_sdr25", /* MMC_TIMING_UHS_SDR25 */
+	"prod_c_sdr50", /* MMC_TIMING_UHS_SDR50 */
+	"prod_c_sdr104", /* MMC_TIMING_UHS_SDR104 */
+	"prod_c_ddr52", /* MMC_TIMING_UHS_DDR50 */
+	"prod_c_ddr52", /* MMC_TIMING_MMC_DDR52 */
+	"prod_c_hs200", /* MMC_TIMING_MMC_HS200 */
+	"prod_c_hs400", /* MMC_TIMING_MMC_HS400 */
+};
+
 struct sdhci_tegra_soc_data {
 	const struct sdhci_pltfm_data *pdata;
 	u64 dma_mask;
@@ -183,6 +194,7 @@ struct sdhci_tegra {
 	bool enable_hwcq;
 	unsigned long curr_clk_rate;
 	u8 tuned_tap_delay;
+	struct tegra_prod *prods;
 	u32 streamid;
 
 };
@@ -374,11 +386,18 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 	u32 misc_ctrl, clk_ctrl, pad_ctrl;
+	int err;
 
 	sdhci_and_cqhci_reset(host, mask);
 
 	if (!(mask & SDHCI_RESET_ALL))
 		return;
+
+		err = tegra_prod_set_by_name(&host->ioaddr, "prod",
+			tegra_host->prods);
+		if (err)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set prod-reset settings %d\n", err);
 
 	tegra_sdhci_set_tap(host, tegra_host->default_tap);
 
@@ -755,9 +774,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
-	struct device *dev = mmc_dev(host->mmc);
 	unsigned long host_clk;
-	int err;
 
 	if (!clock)
 		return sdhci_set_clock(host, clock);
@@ -775,12 +792,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	 * from clk_get_rate() is used.
 	 */
 	host_clk = tegra_host->ddr_signaling ? clock * 2 : clock;
-
-	err = dev_pm_opp_set_rate(dev, host_clk);
-	if (err)
-		dev_err(dev, "failed to set clk rate to %luHz: %d\n",
-			host_clk, err);
-
+	clk_set_rate(pltfm_host->clk, host_clk);
 	tegra_host->curr_clk_rate = clk_get_rate(pltfm_host->clk);
 	if (tegra_host->ddr_signaling)
 		host->max_clk = host_clk;
@@ -1017,8 +1029,10 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	bool set_default_tap = false;
 	bool set_dqs_trim = false;
 	bool do_hs400_dll_cal = false;
+	bool set_padpipe_clk_override = false;
 	u8 iter = TRIES_256;
 	u32 val;
+	int ret;
 
 	tegra_host->ddr_signaling = false;
 	switch (timing) {
@@ -1033,6 +1047,7 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 		set_dqs_trim = true;
 		do_hs400_dll_cal = true;
 		iter = TRIES_128;
+		set_padpipe_clk_override = true;
 		break;
 	case MMC_TIMING_MMC_DDR52:
 	case MMC_TIMING_UHS_DDR50:
@@ -1065,6 +1080,17 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	else
 		tegra_sdhci_set_tap(host, tegra_host->default_tap);
 
+	/*set padpipe_clk_override*/
+	if (set_padpipe_clk_override) {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[timing], tegra_host->prods,
+				0, SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+				SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE);
+		if (ret < 0)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set padpipe clk override value for timing %d, %d\n",
+				timing, ret);
+	}
 	if (set_dqs_trim)
 		tegra_sdhci_set_dqs_trim(host, tegra_host->dqs_trim);
 
@@ -1135,6 +1161,12 @@ static int sdhci_tegra_start_signal_voltage_switch(struct mmc_host *mmc,
 static int tegra_sdhci_init_pinctrl_info(struct device *dev,
 					 struct sdhci_tegra *tegra_host)
 {
+	tegra_host->prods = devm_tegra_prod_get(dev);
+	if (IS_ERR_OR_NULL(tegra_host->prods)) {
+		dev_err(dev, "Prod-setting not available\n");
+		tegra_host->prods = NULL;
+	}
+
 	tegra_host->pinctrl_sdmmc = devm_pinctrl_get(dev);
 	if (IS_ERR(tegra_host->pinctrl_sdmmc)) {
 		dev_dbg(dev, "No pinctrl info, err: %ld\n",
@@ -1772,6 +1804,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 				   "failed to get clock\n");
 		goto err_clk_get;
 	}
+	clk_prepare_enable(clk);
 	pltfm_host->clk = clk;
 
 	tegra_host->rst = devm_reset_control_get_exclusive(&pdev->dev,
@@ -1782,24 +1815,15 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		goto err_rst_get;
 	}
 
-	rc = devm_tegra_core_dev_init_opp_table_common(&pdev->dev);
-	if (rc)
-		goto err_rst_get;
-
-	pm_runtime_enable(&pdev->dev);
-	rc = pm_runtime_resume_and_get(&pdev->dev);
-	if (rc)
-		goto err_pm_get;
-
 	rc = reset_control_assert(tegra_host->rst);
 	if (rc)
-		goto err_rst_assert;
+		goto err_rst_get;
 
 	usleep_range(2000, 4000);
 
 	rc = reset_control_deassert(tegra_host->rst);
 	if (rc)
-		goto err_rst_assert;
+		goto err_rst_get;
 
 	usleep_range(2000, 4000);
 
@@ -1813,11 +1837,8 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 err_add_host:
 	reset_control_assert(tegra_host->rst);
-err_rst_assert:
-	pm_runtime_put_sync_suspend(&pdev->dev);
-err_pm_get:
-	pm_runtime_disable(&pdev->dev);
 err_rst_get:
+	clk_disable_unprepare(pltfm_host->clk);
 err_clk_get:
 	clk_disable_unprepare(tegra_host->tmclk);
 err_power_req:
@@ -1836,38 +1857,19 @@ static int sdhci_tegra_remove(struct platform_device *pdev)
 
 	reset_control_assert(tegra_host->rst);
 	usleep_range(2000, 4000);
-
-	pm_runtime_put_sync_suspend(&pdev->dev);
-	pm_runtime_force_suspend(&pdev->dev);
-
+	clk_disable_unprepare(pltfm_host->clk);
 	clk_disable_unprepare(tegra_host->tmclk);
+
 	sdhci_pltfm_free(pdev);
 
 	return 0;
 }
 
-static int __maybe_unused sdhci_tegra_runtime_suspend(struct device *dev)
-{
-	struct sdhci_host *host = dev_get_drvdata(dev);
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-
-	clk_disable_unprepare(pltfm_host->clk);
-
-	return 0;
-}
-
-static int __maybe_unused sdhci_tegra_runtime_resume(struct device *dev)
-{
-	struct sdhci_host *host = dev_get_drvdata(dev);
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-
-	return clk_prepare_enable(pltfm_host->clk);
-}
-
 #ifdef CONFIG_PM_SLEEP
-static int sdhci_tegra_suspend(struct device *dev)
+static int __maybe_unused sdhci_tegra_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	int ret;
 
 	if (host->mmc->caps2 & MMC_CAP2_CQE) {
@@ -1882,22 +1884,17 @@ static int sdhci_tegra_suspend(struct device *dev)
 		return ret;
 	}
 
-	ret = pm_runtime_force_suspend(dev);
-	if (ret) {
-		sdhci_resume_host(host);
-		cqhci_resume(host->mmc);
-		return ret;
-	}
-
+	clk_disable_unprepare(pltfm_host->clk);
 	return 0;
 }
 
-static int sdhci_tegra_resume(struct device *dev)
+static int __maybe_unused sdhci_tegra_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	int ret;
 
-	ret = pm_runtime_force_resume(dev);
+	ret = clk_prepare_enable(pltfm_host->clk);
 	if (ret)
 		return ret;
 
@@ -1918,16 +1915,13 @@ static int sdhci_tegra_resume(struct device *dev)
 suspend_host:
 	sdhci_suspend_host(host);
 disable_clk:
-	pm_runtime_force_suspend(dev);
+	clk_disable_unprepare(pltfm_host->clk);
 	return ret;
 }
 #endif
 
-static const struct dev_pm_ops sdhci_tegra_dev_pm_ops = {
-	SET_RUNTIME_PM_OPS(sdhci_tegra_runtime_suspend, sdhci_tegra_runtime_resume,
-			   NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(sdhci_tegra_suspend, sdhci_tegra_resume)
-};
+static SIMPLE_DEV_PM_OPS(sdhci_tegra_dev_pm_ops, sdhci_tegra_suspend,
+			 sdhci_tegra_resume);
 
 static struct platform_driver sdhci_tegra_driver = {
 	.driver		= {

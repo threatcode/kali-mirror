@@ -7,7 +7,6 @@
 8021q
 8139cp
 8139too
-8250_aspeed_vuart
 8250_bcm7271
 8250_exar
 8250_men_mcb
@@ -381,7 +380,6 @@ apss-ipq6018
 aptina-pll
 aqc111
 aquacomputer_d5next
-aquantia
 ar1021_i2c
 ar5523
 ar7part
@@ -2126,6 +2124,7 @@ hpfs
 hpilo
 hpsa
 hptiop
+hpwdt
 hsi
 hsi_char
 hso
@@ -3673,7 +3672,6 @@ nouveau
 nozomi
 npcm750-pwm-fan
 nps_enet
-ns
 ns-thermal
 ns558
 ns83820
@@ -4400,7 +4398,6 @@ r592
 r6040
 r8152
 r8153_ecm
-r8169
 r8188eu
 r8192e_pci
 r8192u_usb
@@ -4904,8 +4901,6 @@ rtw88_8821c
 rtw88_8821ce
 rtw88_8822b
 rtw88_8822be
-rtw88_8822c
-rtw88_8822ce
 rtw88_core
 rtw88_pci
 rtw89_core
@@ -5596,15 +5591,22 @@ snd-soc-tegra-audio-graph-card
 snd-soc-tegra-machine
 snd-soc-tegra-pcm
 snd-soc-tegra-wm8903
+snd-soc-tegra186-asrc
 snd-soc-tegra186-dspk
 snd-soc-tegra20-ac97
 snd-soc-tegra20-das
 snd-soc-tegra20-i2s
 snd-soc-tegra20-spdif
 snd-soc-tegra210-admaif
+snd-soc-tegra210-adx
 snd-soc-tegra210-ahub
+snd-soc-tegra210-amx
 snd-soc-tegra210-dmic
 snd-soc-tegra210-i2s
+snd-soc-tegra210-mixer
+snd-soc-tegra210-mvc
+snd-soc-tegra210-ope
+snd-soc-tegra210-sfc
 snd-soc-tegra30-ahub
 snd-soc-tegra30-i2s
 snd-soc-tfa9879

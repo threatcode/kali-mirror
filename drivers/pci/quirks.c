@@ -4847,6 +4847,26 @@ static int pci_quirk_brcm_acs(struct pci_dev *dev, u16 acs_flags)
 		PCI_ACS_SV | PCI_ACS_RR | PCI_ACS_CR | PCI_ACS_UF);
 }
 
+/*
+ * Wangxun 10G/1G NICs have no ACS capability, and on multi-function
+ * devices, peer-to-peer transactions are not be used between the functions.
+ * So add an ACS quirk for below devices to isolate functions.
+ * SFxxx 1G NICs(em).
+ * RP1000/RP2000 10G NICs(sp).
+ */
+static int  pci_quirk_wangxun_nic_acs(struct pci_dev *dev, u16 acs_flags)
+{
+	switch (dev->device) {
+	case 0x0100 ... 0x010F:
+	case 0x1001:
+	case 0x2001:
+		return pci_acs_ctrl_enabled(acs_flags,
+			PCI_ACS_SV | PCI_ACS_RR | PCI_ACS_CR | PCI_ACS_UF);
+	}
+
+	return false;
+}
+
 static const struct pci_dev_acs_enabled {
 	u16 vendor;
 	u16 device;
@@ -4992,6 +5012,8 @@ static const struct pci_dev_acs_enabled {
 	{ PCI_VENDOR_ID_NXP, 0x8d9b, pci_quirk_nxp_rp_acs },
 	/* Zhaoxin Root/Downstream Ports */
 	{ PCI_VENDOR_ID_ZHAOXIN, PCI_ANY_ID, pci_quirk_zhaoxin_pcie_ports_acs },
+	/* Wangxun nics */
+	{ PCI_VENDOR_ID_WANGXUN, PCI_ANY_ID, pci_quirk_wangxun_nic_acs },
 	{ 0 }
 };
 
@@ -5845,72 +5867,17 @@ DECLARE_PCI_FIXUP_CLASS_HEADER(0x1ac1, 0x089a,
 			       PCI_CLASS_NOT_DEFINED, 8, apex_pci_fixup_class);
 
 /*
+ * Device [8086:9a09]
  * BIOS may not be able to access config space of devices under VMD domain, so
  * it relies on software to enable ASPM for links under VMD.
  */
-static bool pci_fixup_is_vmd_bridge(struct pci_dev *pdev)
-{
-	struct pci_bus *bus = pdev->bus;
-	struct device *dev;
-	struct pci_driver *pdrv;
-
-	if (!pci_is_root_bus(bus))
-		return false;
-
-	dev = bus->bridge->parent;
-	if (dev == NULL)
-		return false;
-
-	pdrv = pci_dev_driver(to_pci_dev(dev));
-	if (pdrv == NULL || strcmp("vmd", pdrv->name))
-		return false;
-
-	return true;
-}
-
 static void pci_fixup_enable_aspm(struct pci_dev *pdev)
 {
-	if (!pci_fixup_is_vmd_bridge(pdev))
-		return;
-
 	pdev->dev_flags |= PCI_DEV_FLAGS_ENABLE_ASPM;
 	pci_info(pdev, "enable ASPM for pci bridge behind vmd");
 }
-DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_INTEL, PCI_ANY_ID,
-			       PCI_CLASS_BRIDGE_PCI, 8, pci_fixup_enable_aspm);
-
-static void pci_fixup_enable_vmd_nvme_ltr(struct pci_dev *pdev)
-{
-	struct pci_dev *parent;
-	int pos;
-	u16 val;
-
-	parent = pci_upstream_bridge(pdev);
-	if (!parent)
-		return;
-
-	if (!pci_fixup_is_vmd_bridge(parent))
-		return;
-
-	pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_LTR);
-	if (!pos)
-		return;
-
-	pci_read_config_word(pdev, pos + PCI_LTR_MAX_SNOOP_LAT, &val);
-	if (val)
-		return;
-
-	pci_read_config_word(pdev, pos + PCI_LTR_MAX_NOSNOOP_LAT, &val);
-	if (val)
-		return;
-
-	/* 3145728ns, i.e. 0x300000ns */
-	pci_write_config_word(pdev, pos + PCI_LTR_MAX_SNOOP_LAT, 0x1003);
-	pci_write_config_word(pdev, pos + PCI_LTR_MAX_NOSNOOP_LAT, 0x1003);
-	pci_info(pdev, "enable LTR for nvme behind vmd");
-}
-DECLARE_PCI_FIXUP_CLASS_EARLY(PCI_ANY_ID, PCI_ANY_ID,
-			      PCI_CLASS_STORAGE_EXPRESS, 0, pci_fixup_enable_vmd_nvme_ltr);
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0x9a09, pci_fixup_enable_aspm);
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0xa0b0, pci_fixup_enable_aspm);
 
 static void pci_fixup_serialize_tgl_me_pm(struct pci_dev *pdev)
 {

@@ -1415,7 +1415,7 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 {
 	struct device *dev = &client->dev;
 	struct ucsi_ccg *uc;
-	const char *of_fw_build;
+	const char *fw_name;
 	int status;
 
 	uc = devm_kzalloc(dev, sizeof(*uc), GFP_KERNEL);
@@ -1431,16 +1431,16 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	INIT_WORK(&uc->pm_work, ccg_pm_workaround_work);
 
 	/* Only fail FW flashing when FW build information is not provided */
-	status = device_property_read_string(dev, "cypress,firmware-build",
-					  &of_fw_build);
+	status = device_property_read_string(dev, "firmware-name", &fw_name);
 	if (!status) {
-		if (!strcmp(of_fw_build, "nvidia,jetson-agx-xavier"))
+		if (!strcmp(fw_name, "nvidia,jetson-agx-xavier"))
 			uc->fw_build = CCG_FW_BUILD_NVIDIA_TEGRA;
-		else if (!strcmp(of_fw_build, "nvidia,gpu"))
+		else if (!strcmp(fw_name, "nvidia,gpu"))
 			uc->fw_build = CCG_FW_BUILD_NVIDIA;
-	} else {
-		dev_err(uc->dev, "failed to get FW build information\n");
 	}
+
+	if (!uc->fw_build)
+		dev_err(uc->dev, "failed to get FW build information\n");
 
 	/* reset ccg device and initialize ucsi */
 	status = ucsi_ccg_init(uc);
@@ -1520,6 +1520,12 @@ static const struct i2c_device_id ucsi_ccg_device_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ucsi_ccg_device_id);
 
+static const struct acpi_device_id amd_i2c_ucsi_match[] = {
+	{"AMDI0042"},
+	{}
+};
+MODULE_DEVICE_TABLE(acpi, amd_i2c_ucsi_match);
+
 static int ucsi_ccg_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1561,6 +1567,7 @@ static struct i2c_driver ucsi_ccg_driver = {
 		.name = "ucsi_ccg",
 		.pm = &ucsi_ccg_pm,
 		.dev_groups = ucsi_ccg_groups,
+		.acpi_match_table = amd_i2c_ucsi_match,
 		.of_match_table = ucsi_ccg_of_match_table,
 	},
 	.probe = ucsi_ccg_probe,

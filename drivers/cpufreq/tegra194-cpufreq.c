@@ -77,6 +77,7 @@ struct tegra194_cpufreq_data {
 	struct cpufreq_frequency_table **bpmp_luts;
 	const struct tegra_cpufreq_soc *soc;
 	bool icc_dram_bw_scaling;
+	bool skip_bw_scaling;
 	struct physical_ids *phys_ids;
 };
 
@@ -448,6 +449,8 @@ int tegra_cpufreq_init_cpufreq_table(struct cpufreq_policy *policy,
 		if (ret < 0)
 			return ret;
 
+		dev_pm_opp_put(opp);
+
 		freq_table[j].driver_data = pos->driver_data;
 		freq_table[j].frequency = pos->frequency;
 		j++;
@@ -501,6 +504,16 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
+static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
+{
+	struct device *cpu_dev = get_cpu_device(policy->cpu);
+
+	dev_pm_opp_remove_all_dynamic(cpu_dev);
+	dev_pm_opp_of_cpumask_remove_table(policy->related_cpus);
+
+	return 0;
+}
+
 static int tegra194_cpufreq_set_target(struct cpufreq_policy *policy,
 				       unsigned int index)
 {
@@ -514,7 +527,7 @@ static int tegra194_cpufreq_set_target(struct cpufreq_policy *policy,
 	 */
 	data->soc->ops->set_cpu_ndiv(policy, (u64)tbl->driver_data);
 
-	if (data->icc_dram_bw_scaling)
+	if (data->icc_dram_bw_scaling && !data->skip_bw_scaling)
 		tegra_cpufreq_set_bw(policy, tbl->frequency);
 
 	return 0;
@@ -528,6 +541,7 @@ static struct cpufreq_driver tegra194_cpufreq_driver = {
 	.target_index = tegra194_cpufreq_set_target,
 	.get = tegra194_get_speed,
 	.init = tegra194_cpufreq_init,
+	.exit = tegra194_cpufreq_exit,
 	.attr = cpufreq_generic_attr,
 };
 
@@ -777,6 +791,14 @@ static const struct of_device_id tegra194_cpufreq_of_match[] = {
 MODULE_DEVICE_TABLE(of, tegra194_cpufreq_of_match);
 
 #ifdef CONFIG_PM_SLEEP
+static int tegra194_cpufreq_suspend(struct device *dev)
+{
+	struct tegra194_cpufreq_data *data = cpufreq_get_driver_data();
+
+	data->skip_bw_scaling = true;
+	return 0;
+}
+
 static int tegra194_cpufreq_resume(struct device *dev)
 {
 	struct tegra194_cpufreq_data *data = cpufreq_get_driver_data();
@@ -795,13 +817,14 @@ static int tegra194_cpufreq_resume(struct device *dev)
 				tegra234_cpufreq_offline(cpu);
 		}
 	}
+	data->skip_bw_scaling = false;
 
 	return 0;
 }
 #endif
 
 static const struct dev_pm_ops tegra194_cpufreq_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(NULL, tegra194_cpufreq_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(tegra194_cpufreq_suspend, tegra194_cpufreq_resume)
 };
 
 static struct platform_driver tegra194_ccplex_driver = {
