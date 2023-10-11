@@ -596,11 +596,11 @@ static void fastrpc_dma_buf_detatch(struct dma_buf *dmabuf,
 	kfree(a);
 }
 
-static int fastrpc_vmap(struct dma_buf *dmabuf, struct dma_buf_map *map)
+static int fastrpc_vmap(struct dma_buf *dmabuf, struct iosys_map *map)
 {
 	struct fastrpc_buf *buf = dmabuf->priv;
 
-	dma_buf_map_set_vaddr(map, buf->virt);
+	iosys_map_set_vaddr(map, buf->virt);
 
 	return 0;
 }
@@ -1108,7 +1108,7 @@ static int fastrpc_init_create_process(struct fastrpc_user *fl,
 
 	sc = FASTRPC_SCALARS(FASTRPC_RMID_INIT_CREATE, 4, 0);
 	if (init.attrs)
-		sc = FASTRPC_SCALARS(FASTRPC_RMID_INIT_CREATE_ATTR, 6, 0);
+		sc = FASTRPC_SCALARS(FASTRPC_RMID_INIT_CREATE_ATTR, 4, 0);
 
 	err = fastrpc_internal_invoke(fl, true, FASTRPC_INIT_HANDLE,
 				      sc, args);

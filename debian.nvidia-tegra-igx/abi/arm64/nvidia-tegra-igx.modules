@@ -603,7 +603,6 @@ bh1750
 bh1770glc
 bh1780
 binder_linux
-binfmt_misc
 blake2b_generic
 block2mtd
 blocklayoutdriver
@@ -1095,7 +1094,6 @@ dccp_ipv6
 ddbridge
 ddbridge-dummy-fe
 de2104x
-decnet
 defxx
 denali
 denali_dt
@@ -1180,7 +1178,6 @@ dmfe
 dmi-sysfs
 dmm32at
 dmx3191d
-dn_rtmsg
 dnet
 dp83640
 dp83822
@@ -1195,6 +1192,7 @@ dpdmai
 dpot-dac
 dps310
 dps920ab
+dpt_i2o
 drbd
 drivetemp
 drm
@@ -2340,7 +2338,6 @@ imx-pxp
 imx-sdma
 imx208
 imx214
-imx219
 imx258
 imx274
 imx290
@@ -3710,7 +3707,6 @@ nvec_paz00
 nvec_power
 nvec_ps2
 nvethernet
-nvgpu
 nvhost-capture
 nvhost-isp5
 nvhost-nvcsi
@@ -3719,9 +3715,6 @@ nvhost-nvdla
 nvhost-pva
 nvhost-vi5
 nvhwpm
-nvidia
-nvidia-drm
-nvidia-modeset
 nvidia-vrs-pseq
 nvidiafb
 nvmap
@@ -5133,7 +5126,6 @@ sfp
 sgi_w1
 sgp30
 sgp40
-sh-sci
 sh_eth
 sh_mmcif
 sh_mobile_lcdcfb
@@ -5172,8 +5164,6 @@ sil164
 silead
 simple-bridge
 simple-mfd-i2c
-simpledrm
-simplefb
 siox-bus-gpio
 siox-core
 sir_ir
@@ -6011,7 +6001,6 @@ surface_platform_profile
 svc-i3c-master
 svgalib
 switchtec
-sx8
 sx8654
 sx9310
 sx9500

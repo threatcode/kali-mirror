@@ -5,7 +5,6 @@
 
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
-#include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -155,7 +154,7 @@ static void tegra234_read_counters(struct tegra_cpu_ctr *c)
 {
 	struct tegra194_cpufreq_data *data = cpufreq_get_driver_data();
 	void __iomem *actmon_reg;
-	volatile u32 delta_refcnt;
+	u32 delta_refcnt;
 	int cnt = 0;
 	u64 val;
 
@@ -165,6 +164,11 @@ static void tegra234_read_counters(struct tegra_cpu_ctr *c)
 	val = readq(actmon_reg);
 	c->last_refclk_cnt = upper_32_bits(val);
 	c->last_coreclk_cnt = lower_32_bits(val);
+
+	/*
+	 * The sampling window is based on the minimum number of reference
+	 * clock cycles which is known to give a stable value of CPU frequency.
+	 */
 	do {
 		val = readq(actmon_reg);
 		c->refclk_cnt = upper_32_bits(val);
@@ -245,13 +249,18 @@ static inline u32 map_ndiv_to_freq(struct mrq_cpu_ndiv_limits_response
 static void tegra194_read_counters(struct tegra_cpu_ctr *c)
 {
 	struct tegra194_cpufreq_data *data = cpufreq_get_driver_data();
-	volatile u32 delta_refcnt;
+	u32 delta_refcnt;
 	int cnt = 0;
 	u64 val;
 
 	val = read_freq_feedback();
 	c->last_refclk_cnt = lower_32_bits(val);
 	c->last_coreclk_cnt = upper_32_bits(val);
+
+	/*
+	 * The sampling window is based on the minimum number of reference
+	 * clock cycles which is known to give a stable value of CPU frequency.
+	 */
 	do {
 		val = read_freq_feedback();
 		c->refclk_cnt = lower_32_bits(val);
@@ -323,9 +332,8 @@ static unsigned int tegra194_calculate_speed(u32 cpu)
 	u32 rate_mhz;
 
 	/*
-	 * udelay() is required to reconstruct cpu frequency over an
-	 * observation window. Using workqueue to call udelay() with
-	 * interrupts enabled.
+	 * Reconstruct cpu frequency over an observation/sampling window.
+	 * Using workqueue to keep interrupts enabled during the interval.
 	 */
 	read_counters_work.c.cpu = cpu;
 	INIT_WORK_ONSTACK(&read_counters_work.work, tegra_read_counters);
@@ -543,6 +551,21 @@ static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
 	return 0;
 }
 
+static int tegra194_cpufreq_online(struct cpufreq_policy *policy)
+{
+	/* We did light-weight tear down earlier, nothing to do here */
+	return 0;
+}
+
+static int tegra194_cpufreq_offline(struct cpufreq_policy *policy)
+{
+	/*
+	 * Preserve policy->driver_data and don't free resources on light-weight
+	 * tear down.
+	 */
+	return 0;
+}
+
 static int tegra194_cpufreq_set_target(struct cpufreq_policy *policy,
 				       unsigned int index)
 {
@@ -571,6 +594,8 @@ static struct cpufreq_driver tegra194_cpufreq_driver = {
 	.get = tegra194_get_speed,
 	.init = tegra194_cpufreq_init,
 	.exit = tegra194_cpufreq_exit,
+	.online = tegra194_cpufreq_online,
+	.offline = tegra194_cpufreq_offline,
 	.attr = cpufreq_generic_attr,
 };
 
