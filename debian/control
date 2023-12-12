@@ -62,7 +62,7 @@ Vcs-Git: git://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/jammy
 XS-Testsuite: autopkgtest
 #XS-Testsuite-Depends: gcc-4.7 binutils
 
-Package: linux-nvidia-tegra-igx-headers-5.15.0-1006
+Package: linux-nvidia-tegra-igx-headers-5.15.0-1007
 Build-Profiles: <!stage1>
 Architecture: all
 Multi-Arch: foreign
@@ -72,7 +72,7 @@ Depends: ${misc:Depends}, coreutils
 Description: Header files related to Linux kernel version 5.15.0
  This package provides kernel header files for version 5.15.0, for sites
  that want the latest kernel headers. Please read
- /usr/share/doc/linux-nvidia-tegra-igx-headers-5.15.0-1006/debian.README.gz for details
+ /usr/share/doc/linux-nvidia-tegra-igx-headers-5.15.0-1007/debian.README.gz for details
 
 Package: linux-nvidia-tegra-igx-tools-common
 Build-Profiles: <!stage1>
@@ -80,24 +80,24 @@ Architecture: all
 Multi-Arch: foreign
 Section: kernel
 Priority: optional
-Depends: ${misc:Depends}, lsb-release
+Depends: ${misc:Depends}, lsb-release, hwdata
 Description: Linux kernel version specific tools for version 5.15.0
  This package provides the architecture independent parts for kernel
  version locked tools (such as perf and x86_energy_perf_policy) for
  version 5.15.0.
 
-Package: linux-nvidia-tegra-igx-tools-5.15.0-1006
+Package: linux-nvidia-tegra-igx-tools-5.15.0-1007
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
 Depends: ${misc:Depends}, ${shlibs:Depends}, linux-tools-common
-Description: Linux kernel version specific tools for version 5.15.0-1006
+Description: Linux kernel version specific tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
  version locked tools (such as perf and x86_energy_perf_policy) for
- version 5.15.0-1006 on
+ version 5.15.0-1007 on
  .
- You probably want to install linux-tools-5.15.0-1006-<flavour>.
+ You probably want to install linux-tools-5.15.0-1007-<flavour>.
 
 Package: linux-nvidia-tegra-igx-cloud-tools-common
 Build-Profiles: <!stage1>
@@ -110,17 +110,17 @@ Description: Linux kernel version specific cloud tools for version 5.15.0
  This package provides the architecture independent parts for kernel
  version locked tools for cloud tools for version 5.15.0.
 
-Package: linux-nvidia-tegra-igx-cloud-tools-5.15.0-1006
+Package: linux-nvidia-tegra-igx-cloud-tools-5.15.0-1007
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
 Depends: ${misc:Depends}, ${shlibs:Depends}, linux-cloud-tools-common
-Description: Linux kernel version specific cloud tools for version 5.15.0-1006
+Description: Linux kernel version specific cloud tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
- version locked tools for cloud tools for version 5.15.0-1006 on
+ version locked tools for cloud tools for version 5.15.0-1007 on
  .
- You probably want to install linux-cloud-tools-5.15.0-1006-<flavour>.
+ You probably want to install linux-cloud-tools-5.15.0-1007-<flavour>.
 
 Package: linux-nvidia-tegra-igx-tools-host
 Build-Profiles: <!stage1>
@@ -146,17 +146,17 @@ Description: Extra configuration required for IGX Orin iGPU modules.
 
 
 
-Package: linux-image-5.15.0-1006-nvidia-tegra-igx
+Package: linux-image-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
 Provides: linux-image, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ${linux:rprovides}
-Depends: ${misc:Depends}, ${shlibs:Depends}, kmod, linux-base (>= 4.5ubuntu1~16.04.1), linux-modules-5.15.0-1006-nvidia-tegra-igx
+Depends: ${misc:Depends}, ${shlibs:Depends}, kmod, linux-base (>= 4.5ubuntu1~16.04.1), linux-modules-5.15.0-1007-nvidia-tegra-igx
 Recommends: grub-efi-arm64 [arm64] | flash-kernel [arm64], initramfs-tools | linux-initramfs-tool
 Breaks: flash-kernel (<< 3.90ubuntu2) [arm64 armhf], s390-tools (<< 2.3.0-0ubuntu3) [s390x]
-Conflicts: linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx
-Suggests: fdutils, linux-doc | linux-nvidia-tegra-igx-source-5.15.0, linux-nvidia-tegra-igx-tools, linux-headers-5.15.0-1006-nvidia-tegra-igx, linux-modules-extra-5.15.0-1006-nvidia-tegra-igx
+Conflicts: linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx
+Suggests: fdutils, linux-doc | linux-nvidia-tegra-igx-source-5.15.0, linux-nvidia-tegra-igx-tools, linux-headers-5.15.0-1007-nvidia-tegra-igx, linux-modules-extra-5.15.0-1007-nvidia-tegra-igx
 Description: Linux kernel image for version 5.15.0 on  SMP
  This package contains the Linux kernel image for version 5.15.0 on
   SMP.
@@ -169,12 +169,12 @@ Description: Linux kernel image for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-modules-5.15.0-1006-nvidia-tegra-igx
+Package: linux-modules-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
-Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1006-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx
+Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1007-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx
 Built-Using: ${linux:BuiltUsing}
 Description: Linux kernel extra modules for version 5.15.0 on  SMP
  Contains the corresponding System.map file, the modules built by the
@@ -189,12 +189,12 @@ Description: Linux kernel extra modules for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-modules-extra-5.15.0-1006-nvidia-tegra-igx
+Package: linux-modules-extra-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
-Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1006-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx, wireless-regdb
+Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1007-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx, wireless-regdb
 Description: Linux kernel extra modules for version 5.15.0 on  SMP
  This package contains the Linux kernel extra modules for version 5.15.0 on
   SMP.
@@ -211,21 +211,21 @@ Description: Linux kernel extra modules for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-headers-5.15.0-1006-nvidia-tegra-igx
+Package: linux-headers-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-headers-5.15.0-1006, ${shlibs:Depends}
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-headers-5.15.0-1007, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-3.0
 Description: Linux kernel headers for version 5.15.0 on  SMP
  This package provides kernel header files for version 5.15.0 on
   SMP.
  .
  This is for sites that want the latest kernel headers.  Please read
- /usr/share/doc/linux-headers-5.15.0-1006/debian.README.gz for details.
+ /usr/share/doc/linux-headers-5.15.0-1007/debian.README.gz for details.
 
-Package: linux-image-5.15.0-1006-nvidia-tegra-igx-dbgsym
+Package: linux-image-5.15.0-1007-nvidia-tegra-igx-dbgsym
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
@@ -242,30 +242,30 @@ Description: Linux kernel debug image for version 5.15.0 on  SMP
  is uncompressed, and unstripped. This package also includes the
  unstripped modules.
 
-Package: linux-tools-5.15.0-1006-nvidia-tegra-igx
+Package: linux-tools-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-tools-5.15.0-1006
-Description: Linux kernel version specific tools for version 5.15.0-1006
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-tools-5.15.0-1007
+Description: Linux kernel version specific tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
  version locked tools (such as perf and x86_energy_perf_policy) for
- version 5.15.0-1006 on
+ version 5.15.0-1007 on
  .
 
-Package: linux-cloud-tools-5.15.0-1006-nvidia-tegra-igx
+Package: linux-cloud-tools-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-cloud-tools-5.15.0-1006
-Description: Linux kernel version specific cloud tools for version 5.15.0-1006
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-cloud-tools-5.15.0-1007
+Description: Linux kernel version specific cloud tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
- version locked tools for cloud for version 5.15.0-1006 on
+ version locked tools for cloud for version 5.15.0-1007 on
  .
 
-Package: linux-buildinfo-5.15.0-1006-nvidia-tegra-igx
+Package: linux-buildinfo-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
@@ -279,20 +279,20 @@ Description: Linux kernel buildinfo for version 5.15.0 on  SMP
  You likely do not want to install this package.
 
 
-Package: linux-modules-tegra-igpu-igx-5.15.0-1006-nvidia-tegra-igx
+Package: linux-modules-tegra-igpu-igx-5.15.0-1007-nvidia-tegra-igx
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
 Depends:
  ${misc:Depends},
- linux-image-5.15.0-1006-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx,
+ linux-image-5.15.0-1007-nvidia-tegra-igx | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx,
  linux-nvidia-tegra-igx-tegra-igpu-igx-defaults (>= ${binary:Version}),
 Conflicts: nvidia-dkms-kernel, nvidia-prebuilt-kernel
 Built-Using: ${linux:BuiltUsing}
-Description: Linux kernel tegra-igpu-igx modules for version 5.15.0-1006
+Description: Linux kernel tegra-igpu-igx modules for version 5.15.0-1007
  This package provides the Linux kernel tegra-igpu-igx modules for version
- 5.15.0-1006.
+ 5.15.0-1007.
  .
  You likely do not want to install this package directly. Instead, install the
  one of the linux-modules-tegra-igpu-igx-nvidia-tegra-igx* meta-packages,
@@ -300,17 +300,17 @@ Description: Linux kernel tegra-igpu-igx modules for version 5.15.0-1006
  also installed.
 
 
-Package: linux-image-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-image-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
 Provides: linux-image, fuse-module, kvm-api-4, redhat-cluster-modules, ivtv-modules, ${linux:rprovides}
-Depends: ${misc:Depends}, ${shlibs:Depends}, kmod, linux-base (>= 4.5ubuntu1~16.04.1), linux-modules-5.15.0-1006-nvidia-tegra-igx-rt
+Depends: ${misc:Depends}, ${shlibs:Depends}, kmod, linux-base (>= 4.5ubuntu1~16.04.1), linux-modules-5.15.0-1007-nvidia-tegra-igx-rt
 Recommends: grub-efi-arm64 [arm64] | flash-kernel [arm64], initramfs-tools | linux-initramfs-tool
 Breaks: flash-kernel (<< 3.90ubuntu2) [arm64 armhf], s390-tools (<< 2.3.0-0ubuntu3) [s390x]
-Conflicts: linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx-rt
-Suggests: fdutils, linux-doc | linux-nvidia-tegra-igx-source-5.15.0, linux-nvidia-tegra-igx-tools, linux-headers-5.15.0-1006-nvidia-tegra-igx-rt, linux-modules-extra-5.15.0-1006-nvidia-tegra-igx-rt
+Conflicts: linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx-rt
+Suggests: fdutils, linux-doc | linux-nvidia-tegra-igx-source-5.15.0, linux-nvidia-tegra-igx-tools, linux-headers-5.15.0-1007-nvidia-tegra-igx-rt, linux-modules-extra-5.15.0-1007-nvidia-tegra-igx-rt
 Description: Linux kernel image for version 5.15.0 on  SMP
  This package contains the Linux kernel image for version 5.15.0 on
   SMP.
@@ -323,12 +323,12 @@ Description: Linux kernel image for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx-rt meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-modules-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-modules-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
-Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1006-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx-rt
+Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1007-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx-rt
 Built-Using: ${linux:BuiltUsing}
 Description: Linux kernel extra modules for version 5.15.0 on  SMP
  Contains the corresponding System.map file, the modules built by the
@@ -343,12 +343,12 @@ Description: Linux kernel extra modules for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx-rt meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-modules-extra-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-modules-extra-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
-Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1006-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx-rt, wireless-regdb
+Depends: ${misc:Depends}, ${shlibs:Depends}, linux-image-5.15.0-1007-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx-rt, wireless-regdb
 Description: Linux kernel extra modules for version 5.15.0 on  SMP
  This package contains the Linux kernel extra modules for version 5.15.0 on
   SMP.
@@ -365,21 +365,21 @@ Description: Linux kernel extra modules for version 5.15.0 on  SMP
  the linux-nvidia-tegra-igx-rt meta-package, which will ensure that upgrades work
  correctly, and that supporting packages are also installed.
 
-Package: linux-headers-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-headers-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-headers-5.15.0-1006, ${shlibs:Depends}
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-headers-5.15.0-1007, ${shlibs:Depends}
 Provides: linux-headers, linux-headers-3.0
 Description: Linux kernel headers for version 5.15.0 on  SMP
  This package provides kernel header files for version 5.15.0 on
   SMP.
  .
  This is for sites that want the latest kernel headers.  Please read
- /usr/share/doc/linux-headers-5.15.0-1006/debian.README.gz for details.
+ /usr/share/doc/linux-headers-5.15.0-1007/debian.README.gz for details.
 
-Package: linux-image-5.15.0-1006-nvidia-tegra-igx-rt-dbgsym
+Package: linux-image-5.15.0-1007-nvidia-tegra-igx-rt-dbgsym
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
@@ -396,30 +396,30 @@ Description: Linux kernel debug image for version 5.15.0 on  SMP
  is uncompressed, and unstripped. This package also includes the
  unstripped modules.
 
-Package: linux-tools-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-tools-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-tools-5.15.0-1006
-Description: Linux kernel version specific tools for version 5.15.0-1006
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-tools-5.15.0-1007
+Description: Linux kernel version specific tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
  version locked tools (such as perf and x86_energy_perf_policy) for
- version 5.15.0-1006 on
+ version 5.15.0-1007 on
  .
 
-Package: linux-cloud-tools-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-cloud-tools-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: devel
 Priority: optional
-Depends: ${misc:Depends}, linux-nvidia-tegra-igx-cloud-tools-5.15.0-1006
-Description: Linux kernel version specific cloud tools for version 5.15.0-1006
+Depends: ${misc:Depends}, linux-nvidia-tegra-igx-cloud-tools-5.15.0-1007
+Description: Linux kernel version specific cloud tools for version 5.15.0-1007
  This package provides the architecture dependant parts for kernel
- version locked tools for cloud for version 5.15.0-1006 on
+ version locked tools for cloud for version 5.15.0-1007 on
  .
 
-Package: linux-buildinfo-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-buildinfo-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
@@ -433,20 +433,20 @@ Description: Linux kernel buildinfo for version 5.15.0 on  SMP
  You likely do not want to install this package.
 
 
-Package: linux-modules-tegra-igpu-igx-5.15.0-1006-nvidia-tegra-igx-rt
+Package: linux-modules-tegra-igpu-igx-5.15.0-1007-nvidia-tegra-igx-rt
 Build-Profiles: <!stage1>
 Architecture: arm64
 Section: kernel
 Priority: optional
 Depends:
  ${misc:Depends},
- linux-image-5.15.0-1006-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1006-nvidia-tegra-igx-rt,
+ linux-image-5.15.0-1007-nvidia-tegra-igx-rt | linux-image-unsigned-5.15.0-1007-nvidia-tegra-igx-rt,
  linux-nvidia-tegra-igx-tegra-igpu-igx-defaults (>= ${binary:Version}),
 Conflicts: nvidia-dkms-kernel, nvidia-prebuilt-kernel
 Built-Using: ${linux:BuiltUsing}
-Description: Linux kernel tegra-igpu-igx modules for version 5.15.0-1006
+Description: Linux kernel tegra-igpu-igx modules for version 5.15.0-1007
  This package provides the Linux kernel tegra-igpu-igx modules for version
- 5.15.0-1006.
+ 5.15.0-1007.
  .
  You likely do not want to install this package directly. Instead, install the
  one of the linux-modules-tegra-igpu-igx-nvidia-tegra-igx-rt* meta-packages,

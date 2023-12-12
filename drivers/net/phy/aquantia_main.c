@@ -119,6 +119,7 @@
 /* Vendor specific 1, MDIO_MMD_VEND1 */
 #define VEND1_GLOBAL_FW_ID			0x0020
 #define VEND1_GLOBAL_FW_ID_MAJOR		GENMASK(15, 8)
+#define VEND1_GLOBAL_FW_ID_MASK			GENMASK(15, 0)
 #define VEND1_GLOBAL_FW_ID_MINOR		GENMASK(7, 0)
 
 #define VEND1_GLOBAL_GEN_STAT2			0xc831
@@ -157,6 +158,9 @@
 #define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL1	BIT(2)
 #define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL2	BIT(1)
 #define VEND1_GLOBAL_INT_VEND_MASK_GLOBAL3	BIT(0)
+
+#define VEND1_GLOBAL_CMN_POR_CTRL	0x2681U
+#define PHY_RESET			BIT(0)
 
 /* Sleep and timeout for checking if the Processor-Intensive
  * MDIO operation is finished
@@ -428,7 +432,7 @@ static irqreturn_t aqr_handle_interrupt(struct phy_device *phydev)
 {
 	int reg, val, ret;
 	int irq_status;
-	
+
 	struct aqr107_priv *priv = phydev->priv;
 	reg = phy_read_mmd(phydev, MDIO_MMD_C22EXT, MDIO_C22EXT_GBE_PHY_SGMII_TX_ALARM1);
 	if ((reg & MDIO_C22EXT_SGMII0_MAGIC_PKT_FRAME_MASK) ==
@@ -645,7 +649,9 @@ static int aqr107_wait_reset_complete(struct phy_device *phydev)
 	int val;
 
 	return phy_read_mmd_poll_timeout(phydev, MDIO_MMD_VEND1,
-					 VEND1_GLOBAL_FW_ID, val, val != 0,
+					 VEND1_GLOBAL_FW_ID, val,
+					 ((val & VEND1_GLOBAL_FW_ID_MASK) != 0 &&
+					 (val & VEND1_GLOBAL_FW_ID_MASK) != VEND1_GLOBAL_FW_ID_MASK),
 					 20000, 2000000, false);
 }
 
@@ -754,6 +760,11 @@ static int aqr107_config_init(struct phy_device *phydev)
 
 	WARN(phydev->interface == PHY_INTERFACE_MODE_XGMII,
 	     "Your devicetree is out of date, please update it. The AQR107 family doesn't support XGMII, maybe you mean USXGMII.\n");
+
+	/* SW WAR to reset PHY again to overcome link issues caused during boot */
+	err = phy_write_mmd(phydev, MDIO_MMD_VEND1, VEND1_GLOBAL_CMN_POR_CTRL, PHY_RESET);
+	if (err < 0)
+		return err;
 
 	ret = aqr107_wait_reset_complete(phydev);
 	if (!ret)
@@ -909,7 +920,7 @@ static int aqr107_suspend(struct phy_device *phydev)
 
 	if (priv->skip_lpm)
 		return 0;
-	
+
 	err = phy_set_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 			       MDIO_CTRL1_LPOWER);
 	if (err)
