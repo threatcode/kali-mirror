@@ -1,0 +1,28 @@
+name: Build Kernel Docs
+
+on:
+  push:
+    branches:
+      - ubuntu/jammy-devel  # Adjust to your default branch name
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set Up Kernel Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev
+
+    - name: Build Documentation
+      run: make htmldocs
+
+    - name: Deploy Documentation
+      uses: actions/upload-artifact@v2
+      with:
+        name: kernel-docs
+        path: Documentation/output/html
