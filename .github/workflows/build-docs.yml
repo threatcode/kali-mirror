@@ -15,8 +15,12 @@ jobs:
 
     - name: Set Up Kernel Build Environment
       run: |
+        sudo chmod +x ./scripts/pahole-flags.sh
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev
+        sudo apt-get install graphviz dvipng fonts-noto-cjk latexmk librsvg2-bin texlive-lang-chinese texlive-xetex
+        /usr/bin/python3 -m venv sphinx_2.4.4
+        . sphinx_2.4.4/bin/activate
+        pip install -r ./Documentation/sphinx/requirements.txt
 
     - name: Build Documentation
       run: make htmldocs
